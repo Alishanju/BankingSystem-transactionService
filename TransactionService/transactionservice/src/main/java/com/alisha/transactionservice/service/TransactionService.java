@@ -1,0 +1,115 @@
+package com.alisha.transactionservice.service;
+
+import com.alisha.transactionservice.dto.TransactionRequest;
+import com.alisha.transactionservice.dto.TransactionResponse;
+import com.alisha.transactionservice.dto.TransactionUpdateRequest;
+import com.alisha.transactionservice.entity.Transaction;
+import com.alisha.transactionservice.enums.TransactionStatus;
+import com.alisha.transactionservice.exception.TransactionNotFoundException;
+import com.alisha.transactionservice.repository.TransactionRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import java.time.LocalDateTime;
+import java.util.List;
+
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class TransactionService {
+
+        private final TransactionRepository repository;
+
+        private TransactionResponse map(Transaction txn) {
+
+                return TransactionResponse.builder()
+                                .id(txn.getId())
+                                .customerId(txn.getCustomerId())
+                                .amount(txn.getAmount())
+                                .transactionType(txn.getTransactionType())
+                                .status(txn.getStatus())
+                                .description(txn.getDescription())
+                                .createdAt(txn.getCreatedAt())
+                                .build();
+        }
+
+        public TransactionResponse create(
+                        TransactionRequest request) {
+
+                Transaction transaction = Transaction.builder()
+                                .customerId(request.getCustomerId())
+                                .amount(request.getAmount())
+                                .transactionType(request.getTransactionType())
+                                .description(request.getDescription())
+                                .status(TransactionStatus.SUCCESS)
+                                .createdAt(LocalDateTime.now())
+                                .build();
+
+                Transaction saved = repository.save(transaction);
+
+                log.info("Transaction created with id {}",
+                                saved.getId());
+
+                return map(saved);
+        }
+
+        public Page<TransactionResponse> getAll(
+                        Pageable pageable) {
+                log.info("Fetching all customers via pagination");
+                return repository.findAll(pageable)
+                                .map(this::map);
+        }
+
+        public TransactionResponse getById(Long id) {
+                log.info("Fetching customer by id");
+                Transaction txn = repository.findById(id)
+                                .orElseThrow(() -> new TransactionNotFoundException(
+                                                "Transaction not found"));
+
+                return map(txn);
+        }
+
+        public List<TransactionResponse> getByCustomer(
+                        Long customerId) {
+                log.info("Fetching all customers by customerId");
+                return repository.findByCustomerId(customerId)
+                                .stream()
+                                .map(this::map)
+                                .toList();
+        }
+
+        public TransactionResponse update(
+                        Long id,
+                        TransactionUpdateRequest request) {
+                log.info("Updating customer with id {}", id);
+                Transaction transaction = repository.findById(id)
+                                .orElseThrow(() -> new TransactionNotFoundException(
+                                                "Transaction not found"));
+
+                transaction.setDescription(
+                                request.getDescription());
+
+                transaction.setStatus(
+                                request.getStatus());
+
+                transaction.setUpdatedAt(
+                                LocalDateTime.now());
+
+                Transaction saved = repository.save(transaction);
+
+                return map(saved);
+        }
+
+        public void delete(Long id) {
+                log.info("Deleting customer with id {}", id);
+                Transaction txn = repository.findById(id)
+                                .orElseThrow(() -> new TransactionNotFoundException(
+                                                "Transaction not found"));
+
+                repository.delete(txn);
+                log.info("Customer deleted successfully with id {}", id);
+        }
+}
