@@ -1,12 +1,16 @@
 package com.alisha.transactionservice.service;
 
+import com.alisha.transactionservice.client.CustomerClient;
 import com.alisha.transactionservice.dto.TransactionRequest;
 import com.alisha.transactionservice.dto.TransactionResponse;
 import com.alisha.transactionservice.dto.TransactionUpdateRequest;
 import com.alisha.transactionservice.entity.Transaction;
 import com.alisha.transactionservice.enums.TransactionStatus;
+import com.alisha.transactionservice.exception.CustomerNotFoundException;
 import com.alisha.transactionservice.exception.TransactionNotFoundException;
 import com.alisha.transactionservice.repository.TransactionRepository;
+
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,13 +19,13 @@ import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
 import java.util.List;
 
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class TransactionService {
 
         private final TransactionRepository repository;
+        private final CustomerClient customerClient;
 
         private TransactionResponse map(Transaction txn) {
 
@@ -47,13 +51,25 @@ public class TransactionService {
                                 .status(TransactionStatus.SUCCESS)
                                 .createdAt(LocalDateTime.now())
                                 .build();
+                try {
+
+                        customerClient.getCustomer(
+                                        request.getCustomerId());
+
+                } catch (FeignException.NotFound ex) {
+
+                        throw new CustomerNotFoundException(
+                                        "Customer not found with id "
+                                                        + request.getCustomerId());
+                }
 
                 Transaction saved = repository.save(transaction);
 
-                log.info("Transaction created with id {}",
-                                saved.getId());
+                log.info("Transaction created with id {}", saved.getId());
 
-                return map(saved);
+                return
+
+                map(saved);
         }
 
         public Page<TransactionResponse> getAll(
