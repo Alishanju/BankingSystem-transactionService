@@ -1,17 +1,18 @@
 package com.alisha.transactionservice.config;
 
+import java.security.KeyFactory;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-
 import org.springframework.security.config.http.SessionCreationPolicy;
 
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -19,91 +20,63 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
 import org.springframework.security.web.SecurityFilterChain;
 
-import com.alisha.transactionservice.security.JwtProperties;
-
-import java.nio.file.Files;
-
-import java.security.KeyFactory;
-
-import java.security.spec.X509EncodedKeySpec;
-
-import java.util.Base64;
-
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final ResourceLoader resourceLoader;
+        @Value("${jwt.public-key}")
+        private Resource publicKeyResource;
 
-    private final JwtProperties jwtProperties;
+        @Bean
+        public SecurityFilterChain securityFilterChain(
+                        HttpSecurity http)
+                        throws Exception {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http)
-            throws Exception {
+                http
+                                .csrf(csrf -> csrf.disable())
 
-        http
-                .csrf(csrf -> csrf.disable())
+                                .sessionManagement(session -> session.sessionCreationPolicy(
+                                                SessionCreationPolicy.STATELESS))
 
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers(
+                                                                "/actuator/**",
+                                                                "/swagger-ui/**",
+                                                                "/v3/api-docs/**")
+                                                .permitAll()
 
-                .authorizeHttpRequests(auth -> auth
+                                                .anyRequest()
+                                                .authenticated())
 
-                        .requestMatchers(
-                                "/actuator/**",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**")
-                        .permitAll()
+                                .oauth2ResourceServer(
+                                                oauth -> oauth.jwt(jwt -> {
+                                                }));
 
-                        .anyRequest()
-                        .authenticated())
+                return http.build();
+        }
 
-                .oauth2ResourceServer(
-                        oauth ->
-                                oauth.jwt(jwt -> {
-                                }));
+        @Bean
+        public JwtDecoder jwtDecoder() throws Exception {
 
-        return http.build();
-    }
+                String publicKeyContent = new String(
+                                publicKeyResource.getInputStream()
+                                                .readAllBytes());
 
-    @Bean
-    public JwtDecoder jwtDecoder()
-            throws Exception {
+                publicKeyContent = publicKeyContent
+                                .replace("-----BEGIN PUBLIC KEY-----", "")
+                                .replace("-----END PUBLIC KEY-----", "")
+                                .replaceAll("\\s+", "");
 
-        Resource resource =
-                resourceLoader.getResource(
-                        jwtProperties.getPublicKey());
+                byte[] decodedKey = Base64.getDecoder().decode(publicKeyContent);
 
-        String key = Files.readString(
-                resource.getFile().toPath());
+                X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decodedKey);
 
-        key = key
-                .replace(
-                        "-----BEGIN PUBLIC KEY-----",
-                        "")
-                .replace(
-                        "-----END PUBLIC KEY-----",
-                        "")
-                .replaceAll("\\s", "");
+                KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
-        byte[] decoded =
-                Base64.getDecoder()
-                        .decode(key);
+                RSAPublicKey publicKey = (RSAPublicKey) keyFactory.generatePublic(keySpec);
 
-        X509EncodedKeySpec spec =
-                new X509EncodedKeySpec(decoded);
-
-        KeyFactory keyFactory =
-                KeyFactory.getInstance("RSA");
-
-        RSAPublicKey publicKey =
-                (RSAPublicKey)
-                        keyFactory.generatePublic(spec);
-
-        return NimbusJwtDecoder
-                .withPublicKey(publicKey)
-                .build();
-    }
+                return NimbusJwtDecoder
+                                .withPublicKey(publicKey)
+                                .build();
+        }
 }

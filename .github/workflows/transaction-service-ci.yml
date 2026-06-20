@@ -35,5 +35,5 @@ jobs:
       - name: Maven Package
         run: mvn clean package -DskipTests
 
-      # - name: Build Docker Image
-      #   run: docker build -t customer-service:${{ github.sha }} .
+      - name: Build Docker Image
+        run: docker build -t transaction-service:${{ github.sha }} .
