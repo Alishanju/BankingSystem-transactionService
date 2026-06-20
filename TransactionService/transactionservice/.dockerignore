@@ -1,0 +1,9 @@
+.git
+.idea
+.vscode
+
+target/*.original
+
+logs
+
+README.md
