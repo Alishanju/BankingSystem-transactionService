@@ -52,4 +52,18 @@ public class GlobalExceptionHandler {
                                 .status(HttpStatus.NOT_FOUND)
                                 .body(error);
         }
+
+        @ExceptionHandler(CustomerServiceUnavailableException.class)
+        public ResponseEntity<ErrorResponse> handleCustomerServiceUnavailable(
+                        CustomerServiceUnavailableException ex) {
+
+                ErrorResponse response = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .message(ex.getMessage())
+                                .build();
+
+                return ResponseEntity
+                                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                                .body(response);
+        }
 }
