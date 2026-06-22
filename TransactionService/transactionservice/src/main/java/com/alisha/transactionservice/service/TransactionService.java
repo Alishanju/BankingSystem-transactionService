@@ -7,10 +7,13 @@ import com.alisha.transactionservice.dto.TransactionUpdateRequest;
 import com.alisha.transactionservice.entity.Transaction;
 import com.alisha.transactionservice.enums.TransactionStatus;
 import com.alisha.transactionservice.exception.CustomerNotFoundException;
+import com.alisha.transactionservice.exception.CustomerServiceUnavailableException;
 import com.alisha.transactionservice.exception.TransactionNotFoundException;
 import com.alisha.transactionservice.repository.TransactionRepository;
 
 import feign.FeignException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,7 @@ public class TransactionService {
 
         private final TransactionRepository repository;
         private final CustomerClient customerClient;
+        private final CustomerValidationService customerValidationService;
 
         private TransactionResponse map(Transaction txn) {
 
@@ -52,9 +56,12 @@ public class TransactionService {
                                 .createdAt(LocalDateTime.now())
                                 .build();
                 try {
-
-                        customerClient.getCustomer(
+                        log.info(
+                                        "Creating transaction for customer id {}",
                                         request.getCustomerId());
+                        customerValidationService
+                                        .validateCustomer(
+                                                        request.getCustomerId());
 
                 } catch (FeignException.NotFound ex) {
 
