@@ -27,6 +27,8 @@ public class SecurityConfig {
         @Value("${jwt.public-key}")
         private Resource publicKeyResource;
 
+        private final JwtConverter jwtConverter;
+
         @Bean
         public SecurityFilterChain securityFilterChain(
                         HttpSecurity http)
@@ -48,9 +50,8 @@ public class SecurityConfig {
                                                 .anyRequest()
                                                 .authenticated())
 
-                                .oauth2ResourceServer(
-                                                oauth -> oauth.jwt(jwt -> {
-                                                }));
+                                .oauth2ResourceServer(oauth -> oauth
+                                                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtConverter)));
 
                 return http.build();
         }

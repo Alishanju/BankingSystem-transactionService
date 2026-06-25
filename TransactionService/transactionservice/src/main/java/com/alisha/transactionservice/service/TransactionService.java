@@ -1,22 +1,19 @@
 package com.alisha.transactionservice.service;
 
-import com.alisha.transactionservice.client.CustomerClient;
 import com.alisha.transactionservice.dto.TransactionRequest;
 import com.alisha.transactionservice.dto.TransactionResponse;
 import com.alisha.transactionservice.dto.TransactionUpdateRequest;
 import com.alisha.transactionservice.entity.Transaction;
 import com.alisha.transactionservice.enums.TransactionStatus;
 import com.alisha.transactionservice.exception.CustomerNotFoundException;
-import com.alisha.transactionservice.exception.CustomerServiceUnavailableException;
 import com.alisha.transactionservice.exception.TransactionNotFoundException;
 import com.alisha.transactionservice.repository.TransactionRepository;
 
 import feign.FeignException;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
@@ -28,7 +25,6 @@ import java.util.List;
 public class TransactionService {
 
         private final TransactionRepository repository;
-        private final CustomerClient customerClient;
         private final CustomerValidationService customerValidationService;
 
         private TransactionResponse map(Transaction txn) {
@@ -44,6 +40,7 @@ public class TransactionService {
                                 .build();
         }
 
+        @Transactional
         public TransactionResponse create(
                         TransactionRequest request) {
 
@@ -59,6 +56,7 @@ public class TransactionService {
                         log.info(
                                         "Creating transaction for customer id {}",
                                         request.getCustomerId());
+
                         customerValidationService
                                         .validateCustomer(
                                                         request.getCustomerId());
@@ -74,9 +72,12 @@ public class TransactionService {
 
                 log.info("Transaction created with id {}", saved.getId());
 
-                return
+                // if (true) {
+                // throw new RuntimeException(
+                // "Testing rollback");
+                // }
 
-                map(saved);
+                return map(saved);
         }
 
         public Page<TransactionResponse> getAll(
@@ -104,6 +105,7 @@ public class TransactionService {
                                 .toList();
         }
 
+        @Transactional
         public TransactionResponse update(
                         Long id,
                         TransactionUpdateRequest request) {
@@ -126,6 +128,7 @@ public class TransactionService {
                 return map(saved);
         }
 
+        @Transactional
         public void delete(Long id) {
                 log.info("Deleting customer with id {}", id);
                 Transaction txn = repository.findById(id)
@@ -134,5 +137,14 @@ public class TransactionService {
 
                 repository.delete(txn);
                 log.info("Customer deleted successfully with id {}", id);
+        }
+
+        @Transactional
+        public void deleteByCustomerId(Long customerId) {
+                log.info("Deleting customer with customer id {}", customerId);
+                int deleted = repository.deleteTransactionsByCustomerId(customerId);
+                log.info("Customers deleted successfully with customer id {}", customerId);
+                log.info("{} transactions deleted", deleted);
+
         }
 }

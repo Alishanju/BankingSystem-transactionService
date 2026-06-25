@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -69,11 +70,22 @@ public class TransactionController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete Transaction", description = "Delete transaction by id")
+    // @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete Transaction by id", description = "Delete transaction by id")
 
     public void delete(
             @PathVariable Long id) {
 
         service.delete(id);
+    }
+
+    @DeleteMapping("/customer/{customerId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete Transaction by customerId", description = "Delete transaction by customerId")
+
+    public void deleteByCustomerId(
+            @PathVariable Long customerId) {
+
+        service.deleteByCustomerId(customerId);
     }
 }
