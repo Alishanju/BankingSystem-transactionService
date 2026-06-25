@@ -66,4 +66,17 @@ public class GlobalExceptionHandler {
                                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                                 .body(response);
         }
+
+        @ExceptionHandler(Exception.class)
+        public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
+
+                ErrorResponse error = new ErrorResponse(
+                                LocalDateTime.now(),
+                                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                                ex.getMessage());
+
+                return ResponseEntity
+                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(error);
+        }
 }
